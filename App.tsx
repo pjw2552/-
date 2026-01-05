@@ -4,6 +4,7 @@ import { SiteContent, ContentKey, Post } from './types';
 import { DEFAULT_CONTENT, INITIAL_POSTS } from './constants';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
+import Intro from './components/Intro';
 import Philosophy from './components/Philosophy';
 import Programs from './components/Programs';
 import NoticeBoard from './components/NoticeBoard';
@@ -36,16 +37,12 @@ const App: React.FC = () => {
       const loadedPosts: Post[] = saved ? JSON.parse(saved) : INITIAL_POSTS;
       
       const now = new Date().getTime();
-      // 만료된 게시물 필터링
       const freshPosts = loadedPosts.filter(post => {
-        // 날짜 형식이 YYYY-MM-DD인 경우 안전하게 파싱
         const [year, month, day] = post.date.split('-').map(Number);
         const postDate = new Date(year, month - 1, day).getTime();
         const durationMs = (post.durationDays || DEFAULT_DURATION) * 24 * 60 * 60 * 1000;
-        
         return isNaN(postDate) || (now - postDate) < durationMs;
       });
-      
       return freshPosts;
     } catch (e) {
       return INITIAL_POSTS;
@@ -106,9 +103,31 @@ const App: React.FC = () => {
     setPosts(newPosts);
   }, []);
 
+  const processImageFile = (file: File) => {
+    if (!activeImgTarget) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const res = ev.target?.result as string;
+      if (activeImgTarget.key === 'heroImages' && activeImgTarget.index !== undefined) {
+        const newImgs = [...content.heroImages];
+        newImgs[activeImgTarget.index] = res;
+        handleContentUpdate('heroImages', newImgs);
+      } else {
+        handleContentUpdate(activeImgTarget.key, res);
+      }
+      setActiveImgTarget(null);
+    };
+    reader.readAsDataURL(file);
+  };
+
   return (
     <div className={`relative min-h-screen ${isEditMode ? 'admin-active' : ''}`}>
-      <Navbar content={content} isEditMode={isEditMode} onImageClick={() => handleImageClick('logoImg')} />
+      <Navbar 
+        content={content} 
+        isEditMode={isEditMode} 
+        onImageClick={() => handleImageClick('logoImg')} 
+      />
+      
       <main>
         <Hero 
           content={content} 
@@ -119,25 +138,63 @@ const App: React.FC = () => {
           onAddImage={() => setContent(prev => ({ ...prev, heroImages: [...prev.heroImages, DEFAULT_CONTENT.heroImages[0]] }))}
           onRemoveImage={(idx) => setContent(prev => ({ ...prev, heroImages: prev.heroImages.filter((_, i) => i !== idx) }))}
         />
+        
         <SocialConnect />
+
+        <section id="intro">
+          <Intro 
+            content={content} 
+            isEditMode={isEditMode} 
+            onUpdate={handleContentUpdate} 
+            onImageClick={(key) => handleImageClick(key)}
+            onImageDrop={(key, file) => {
+              setActiveImgTarget({ key });
+              processImageFile(file);
+            }}
+          />
+        </section>
+
         <section id="philosophy" className="bg-gray-50">
           <Philosophy content={content} isEditMode={isEditMode} onUpdate={handleContentUpdate} onFontSizeUpdate={handleFontSizeUpdate} />
         </section>
+
         <section id="programs">
-          <Programs content={content} isEditMode={isEditMode} onUpdate={handleContentUpdate} onFontSizeUpdate={handleFontSizeUpdate} onImageClick={(key) => handleImageClick(key)} />
+          <Programs 
+            content={content} 
+            isEditMode={isEditMode} 
+            onUpdate={handleContentUpdate} 
+            onFontSizeUpdate={handleFontSizeUpdate} 
+            onImageClick={(key) => handleImageClick(key)}
+            onImageDrop={(key, file) => {
+              setActiveImgTarget({ key });
+              processImageFile(file);
+            }}
+          />
         </section>
+
         <section id="notice" className="bg-gray-50">
           <NoticeBoard posts={posts} isEditMode={isEditMode} onAddPost={addPost} onDeletePost={deletePost} />
         </section>
+
         <section id="contact">
           <Contact content={content} isEditMode={isEditMode} onUpdate={handleContentUpdate} onFontSizeUpdate={handleFontSizeUpdate} />
         </section>
+
         <section id="apply" className="bg-blue-50">
           <ApplicationForm />
         </section>
       </main>
+
       <Footer />
-      <AdminControls isEditMode={isEditMode} toggleEdit={() => setIsEditMode(!isEditMode)} currentContent={content} currentPosts={posts} onImport={handleImportData} />
+      
+      <AdminControls 
+        isEditMode={isEditMode} 
+        toggleEdit={() => setIsEditMode(!isEditMode)} 
+        currentContent={content} 
+        currentPosts={posts} 
+        onImport={handleImportData} 
+      />
+
       <input 
         type="file" 
         ref={imageUploadRef} 
@@ -145,20 +202,7 @@ const App: React.FC = () => {
         accept="image/*" 
         onChange={(e) => {
           const file = e.target.files?.[0];
-          if (file && activeImgTarget) {
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-              const res = ev.target?.result as string;
-              if (activeImgTarget.key === 'heroImages' && activeImgTarget.index !== undefined) {
-                const newImgs = [...content.heroImages];
-                newImgs[activeImgTarget.index] = res;
-                handleContentUpdate('heroImages', newImgs);
-              } else {
-                handleContentUpdate(activeImgTarget.key, res);
-              }
-            };
-            reader.readAsDataURL(file);
-          }
+          if (file) processImageFile(file);
         }} 
       />
     </div>

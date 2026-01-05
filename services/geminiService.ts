@@ -1,10 +1,10 @@
 
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
-
 export async function askTaekwondoMentor(question: string) {
   try {
+    // API 호출 직전에 인스턴스를 생성하여 최신 API 키를 사용하고 초기 로드 오류를 방지합니다.
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: question,
