@@ -13,7 +13,6 @@
             font-family: 'Noto Sans KR', sans-serif;
             scroll-behavior: smooth;
         }
-        /* Fixed header height offset for anchor links */
         [id] {
             scroll-margin-top: 80px;
         }
@@ -28,7 +27,6 @@
             animation: fade-in-down 0.4s ease-out forwards;
         }
         
-        /* Edit Mode Styling */
         .admin-active {
             border: 8px solid #3b82f6;
             min-height: 100vh;
@@ -87,5 +85,7 @@
 </head>
 <body class="bg-white text-gray-900 overflow-x-hidden">
     <div id="root"></div>
+    <!-- 앱 실행을 위한 메인 스크립트 태그 명시적 추가 -->
+    <script type="module" src="index.tsx"></script>
 </body>
 </html>

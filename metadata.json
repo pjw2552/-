@@ -1,5 +1,5 @@
 {
   "name": "연세효 태권도 (Yeonsei Hyo Taekwondo)",
-  "description": "A premium martial arts dojo web application featuring a responsive landing page, editable content for administrators, a notice board, and an AI-powered consultant for parents.",
+  "description": "프리미엄 태권도 교육 연세효 태권도의 반응형 웹사이트입니다. 관리자 모드를 통한 실시간 콘텐츠 수정, 소식 게시판, 무료 체험 신청 기능을 제공합니다.",
   "requestFramePermissions": []
 }

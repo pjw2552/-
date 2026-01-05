@@ -1,13 +1,17 @@
 
 import { GoogleGenAI } from "@google/genai";
 
+/**
+ * AI 상담 기능이 UI에서 제거되었으나, 
+ * 서비스 레이어에서 발생할 수 있는 process 미정의 에러를 방지합니다.
+ */
 export async function askTaekwondoMentor(question: string) {
   try {
-    // process 객체가 정의되어 있는지 확인하여 환경 에러 방지
-    const apiKey = typeof process !== 'undefined' ? process.env.API_KEY : '';
+    // browser 환경에서는 process가 없을 수 있으므로 안전하게 접근
+    const env = typeof process !== 'undefined' ? process.env : {};
+    const apiKey = env.API_KEY || '';
     
     if (!apiKey) {
-      console.warn("API Key is missing");
       return "상담 서비스 설정이 완료되지 않았습니다.";
     }
 
