@@ -23,11 +23,12 @@ const App: React.FC = () => {
       const saved = localStorage.getItem('site_content');
       if (saved) {
         const parsed = JSON.parse(saved);
-        // Ensure heroImages is always an array
-        if (parsed && !Array.isArray(parsed.heroImages)) {
-            parsed.heroImages = DEFAULT_CONTENT.heroImages;
+        // 저장된 데이터와 기본 데이터를 병합하여 구조적 안정성 확보
+        const merged = { ...DEFAULT_CONTENT, ...parsed };
+        if (!Array.isArray(merged.heroImages)) {
+          merged.heroImages = DEFAULT_CONTENT.heroImages;
         }
-        return { ...DEFAULT_CONTENT, ...parsed };
+        return merged;
       }
     } catch (e) {
       console.warn("Content Load Error, using defaults");
@@ -61,17 +62,20 @@ const App: React.FC = () => {
   // --- Persistence with Error Handling ---
   useEffect(() => {
     try {
-        localStorage.setItem('site_content', JSON.stringify(content));
+      localStorage.setItem('site_content', JSON.stringify(content));
     } catch (e) {
-        console.error("Storage quota exceeded or error saving content. Try smaller images.");
+      console.error("Storage Error:", e);
+      if (e instanceof DOMException && e.name === 'QuotaExceededError') {
+        alert("이미지 용량이 너무 커서 더 이상 저장할 수 없습니다.\n일부 사진을 삭제하거나 더 작은 크기의 사진을 사용해주세요.");
+      }
     }
   }, [content]);
 
   useEffect(() => {
     try {
-        localStorage.setItem('site_posts', JSON.stringify(posts));
+      localStorage.setItem('site_posts', JSON.stringify(posts));
     } catch (e) {
-        console.error("Error saving posts.");
+      console.error("Error saving posts.");
     }
   }, [posts]);
 
@@ -116,36 +120,68 @@ const App: React.FC = () => {
     setPosts(newPosts);
   }, []);
 
-  const processImageFile = (file: File) => {
+  // --- Image Processing (Optimization) ---
+  const compressAndResizeImage = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 1200; // 최대 가로폭 제한
+          const MAX_HEIGHT = 1200; // 최대 세로폭 제한
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          
+          // jpeg 포맷과 0.7 퀄리티로 압축하여 용량 최소화
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+          resolve(dataUrl);
+        };
+        img.onerror = reject;
+      };
+      reader.onerror = reject;
+    });
+  };
+
+  const processImageFile = async (file: File) => {
     if (!activeImgTarget) return;
     
-    // 파일 크기 체크 (5MB 제한 권장 - 브라우저 저장소 한계 때문)
-    if (file.size > 5 * 1024 * 1024) {
-        alert("이미지 파일이 너무 큽니다. 5MB 이하의 파일을 사용해주세요.");
-        setActiveImgTarget(null);
-        return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const res = ev.target?.result as string;
-      if (!res) return;
-
+    try {
+      const compressedImg = await compressAndResizeImage(file);
+      
       if (activeImgTarget.key === 'heroImages' && activeImgTarget.index !== undefined) {
         const newImgs = [...(content.heroImages || [])];
         if (newImgs.length === 0) newImgs.push(DEFAULT_CONTENT.heroImages[0]);
-        newImgs[activeImgTarget.index] = res;
+        newImgs[activeImgTarget.index] = compressedImg;
         handleContentUpdate('heroImages', newImgs);
       } else {
-        handleContentUpdate(activeImgTarget.key, res);
+        handleContentUpdate(activeImgTarget.key, compressedImg);
       }
+    } catch (err) {
+      console.error("Image processing failed:", err);
+      alert("이미지를 처리하는 중 오류가 발생했습니다.");
+    } finally {
       setActiveImgTarget(null);
-    };
-    reader.onerror = () => {
-        alert("파일을 읽는 중 오류가 발생했습니다.");
-        setActiveImgTarget(null);
-    };
-    reader.readAsDataURL(file);
+    }
   };
 
   return (
