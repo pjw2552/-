@@ -31,7 +31,7 @@ const SocialConnect: React.FC = () => {
   ];
 
   return (
-    <section id="intro" className="py-24 bg-white overflow-hidden scroll-mt-20">
+    <section id="social" className="py-24 bg-white overflow-hidden scroll-mt-20">
       <div className="container mx-auto px-4 lg:px-20 text-center mb-16">
         <h3 className="text-3xl md:text-5xl font-black mb-4 inline-block relative after:content-[''] after:block after:w-20 after:h-1.5 after:bg-[#0047A0] after:mx-auto after:mt-6">
           연세효 <span style={{ color: COLORS.primaryBlue }}>SNS 채널</span>
@@ -87,23 +87,9 @@ const SocialConnect: React.FC = () => {
             <div className="absolute -bottom-10 -right-10 opacity-5 group-hover:opacity-10 transition-all duration-1000 pointer-events-none group-hover:-rotate-12 group-hover:scale-125">
                <i className={`${sns.icon} text-[240px]`}></i>
             </div>
-            
-            {/* Shine Effect */}
-            <div className="absolute top-0 -inset-full h-full w-1/2 z-5 block transform -skew-x-12 bg-gradient-to-r from-transparent to-white opacity-20 group-hover:animate-shine" />
           </a>
         ))}
       </div>
-
-      <style dangerouslySetInnerHTML={{ __html: `
-        @keyframes shine {
-          100% {
-            left: 125%;
-          }
-        }
-        .group-hover\\:animate-shine {
-          animation: shine 0.8s;
-        }
-      `}} />
     </section>
   );
 };

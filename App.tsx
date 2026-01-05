@@ -38,6 +38,7 @@ const App: React.FC = () => {
       
       const now = new Date().getTime();
       const freshPosts = loadedPosts.filter(post => {
+        if (!post.date) return false;
         const [year, month, day] = post.date.split('-').map(Number);
         const postDate = new Date(year, month - 1, day).getTime();
         const durationMs = (post.durationDays || DEFAULT_DURATION) * 24 * 60 * 60 * 1000;
@@ -139,9 +140,8 @@ const App: React.FC = () => {
           onRemoveImage={(idx) => setContent(prev => ({ ...prev, heroImages: prev.heroImages.filter((_, i) => i !== idx) }))}
         />
         
-        <SocialConnect />
-
-        <section id="intro">
+        {/* 1. 도장 소개 (관장님 인사말) */}
+        <section id="intro" className="scroll-mt-20">
           <Intro 
             content={content} 
             isEditMode={isEditMode} 
@@ -154,11 +154,21 @@ const App: React.FC = () => {
           />
         </section>
 
-        <section id="philosophy" className="bg-gray-50">
-          <Philosophy content={content} isEditMode={isEditMode} onUpdate={handleContentUpdate} onFontSizeUpdate={handleFontSizeUpdate} />
+        {/* 2. 도장 SNS 채널 (인사말과 교육철학 사이 배치) */}
+        <SocialConnect />
+
+        {/* 3. 교육 철학 */}
+        <section id="philosophy" className="bg-gray-50 scroll-mt-20">
+          <Philosophy 
+            content={content} 
+            isEditMode={isEditMode} 
+            onUpdate={handleContentUpdate} 
+            onFontSizeUpdate={handleFontSizeUpdate} 
+          />
         </section>
 
-        <section id="programs">
+        {/* 4. 수련 프로그램 안내 */}
+        <section id="programs" className="scroll-mt-20">
           <Programs 
             content={content} 
             isEditMode={isEditMode} 
@@ -172,15 +182,18 @@ const App: React.FC = () => {
           />
         </section>
 
-        <section id="notice" className="bg-gray-50">
+        {/* 5. 도장 소식 게시판 */}
+        <section id="notice" className="bg-gray-50 scroll-mt-20">
           <NoticeBoard posts={posts} isEditMode={isEditMode} onAddPost={addPost} onDeletePost={deletePost} />
         </section>
 
-        <section id="contact">
+        {/* 6. 상담 문의 및 오시는 길 */}
+        <section id="contact" className="scroll-mt-20">
           <Contact content={content} isEditMode={isEditMode} onUpdate={handleContentUpdate} onFontSizeUpdate={handleFontSizeUpdate} />
         </section>
 
-        <section id="apply" className="bg-blue-50">
+        {/* 7. 무료 체험 신청 폼 */}
+        <section id="apply" className="bg-blue-50 scroll-mt-20">
           <ApplicationForm />
         </section>
       </main>
