@@ -96,7 +96,7 @@ const Programs: React.FC<ProgramsProps> = ({ content, isEditMode, onUpdate, onFo
               onDragLeave={handleDragLeave}
               onDrop={(e) => handleDrop(e, prog.imgKey)}
             >
-              {content[prog.imgKey] ? (
+              {content && content[prog.imgKey] ? (
                 <img 
                   src={content[prog.imgKey] as string} 
                   alt={prog.tag} 
@@ -121,18 +121,18 @@ const Programs: React.FC<ProgramsProps> = ({ content, isEditMode, onUpdate, onFo
             <div className="p-6 md:p-8 flex flex-col flex-1">
               <EditableText 
                 tag="h4"
-                value={content[prog.titleKey] as string}
+                value={(content && (content[prog.titleKey] as string)) || ""}
                 isEditMode={isEditMode}
                 onUpdate={(v) => onUpdate(prog.titleKey, v)}
-                fontSize={content.fontSizes?.progTitle}
+                fontSize={content?.fontSizes?.progTitle}
                 onFontSizeUpdate={(size) => onFontSizeUpdate('progTitle', size)}
                 className="font-black mb-4 text-gray-900 min-h-[3.5rem] flex items-center leading-tight break-keep"
               />
               <EditableText 
-                value={content[prog.descKey] as string}
+                value={(content && (content[prog.descKey] as string)) || ""}
                 isEditMode={isEditMode}
                 onUpdate={(v) => onUpdate(prog.descKey, v)}
-                fontSize={content.fontSizes?.progDesc}
+                fontSize={content?.fontSizes?.progDesc}
                 onFontSizeUpdate={(size) => onFontSizeUpdate('progDesc', size)}
                 className="text-gray-500 mb-8 leading-relaxed flex-1 break-keep"
                 multiline
@@ -144,10 +144,10 @@ const Programs: React.FC<ProgramsProps> = ({ content, isEditMode, onUpdate, onFo
                     <i className="fas fa-check-circle text-[#CD2E3A] mr-2 md:mr-3 shrink-0 text-xs"></i> 
                     <div className="flex-1">
                       <EditableText 
-                        value={content[fKey] as string}
+                        value={(content && (content[fKey] as string)) || ""}
                         isEditMode={isEditMode}
                         onUpdate={(v) => onUpdate(fKey, v)}
-                        fontSize={content.fontSizes?.progFeature}
+                        fontSize={content?.fontSizes?.progFeature}
                         onFontSizeUpdate={(size) => onFontSizeUpdate('progFeature', size)}
                         className="text-[11px] md:text-[12px] leading-tight break-keep"
                       />

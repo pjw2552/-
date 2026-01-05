@@ -23,10 +23,14 @@ const App: React.FC = () => {
       const saved = localStorage.getItem('site_content');
       if (saved) {
         const parsed = JSON.parse(saved);
+        // Ensure heroImages is always an array
+        if (parsed && !Array.isArray(parsed.heroImages)) {
+            parsed.heroImages = DEFAULT_CONTENT.heroImages;
+        }
         return { ...DEFAULT_CONTENT, ...parsed };
       }
     } catch (e) {
-      console.warn("Content Load Error");
+      console.warn("Content Load Error, using defaults");
     }
     return DEFAULT_CONTENT;
   });
@@ -54,13 +58,21 @@ const App: React.FC = () => {
   const imageUploadRef = useRef<HTMLInputElement>(null);
   const [activeImgTarget, setActiveImgTarget] = useState<{key: ContentKey, index?: number} | null>(null);
 
-  // --- Persistence ---
+  // --- Persistence with Error Handling ---
   useEffect(() => {
-    localStorage.setItem('site_content', JSON.stringify(content));
+    try {
+        localStorage.setItem('site_content', JSON.stringify(content));
+    } catch (e) {
+        console.error("Storage quota exceeded or error saving content. Try smaller images.");
+    }
   }, [content]);
 
   useEffect(() => {
-    localStorage.setItem('site_posts', JSON.stringify(posts));
+    try {
+        localStorage.setItem('site_posts', JSON.stringify(posts));
+    } catch (e) {
+        console.error("Error saving posts.");
+    }
   }, [posts]);
 
   // --- Handlers ---
@@ -106,17 +118,32 @@ const App: React.FC = () => {
 
   const processImageFile = (file: File) => {
     if (!activeImgTarget) return;
+    
+    // 파일 크기 체크 (5MB 제한 권장 - 브라우저 저장소 한계 때문)
+    if (file.size > 5 * 1024 * 1024) {
+        alert("이미지 파일이 너무 큽니다. 5MB 이하의 파일을 사용해주세요.");
+        setActiveImgTarget(null);
+        return;
+    }
+
     const reader = new FileReader();
     reader.onload = (ev) => {
       const res = ev.target?.result as string;
+      if (!res) return;
+
       if (activeImgTarget.key === 'heroImages' && activeImgTarget.index !== undefined) {
-        const newImgs = [...content.heroImages];
+        const newImgs = [...(content.heroImages || [])];
+        if (newImgs.length === 0) newImgs.push(DEFAULT_CONTENT.heroImages[0]);
         newImgs[activeImgTarget.index] = res;
         handleContentUpdate('heroImages', newImgs);
       } else {
         handleContentUpdate(activeImgTarget.key, res);
       }
       setActiveImgTarget(null);
+    };
+    reader.onerror = () => {
+        alert("파일을 읽는 중 오류가 발생했습니다.");
+        setActiveImgTarget(null);
     };
     reader.readAsDataURL(file);
   };
@@ -136,11 +163,10 @@ const App: React.FC = () => {
           onUpdate={handleContentUpdate}
           onFontSizeUpdate={handleFontSizeUpdate}
           onImageClick={(idx) => handleImageClick('heroImages', idx)}
-          onAddImage={() => setContent(prev => ({ ...prev, heroImages: [...prev.heroImages, DEFAULT_CONTENT.heroImages[0]] }))}
-          onRemoveImage={(idx) => setContent(prev => ({ ...prev, heroImages: prev.heroImages.filter((_, i) => i !== idx) }))}
+          onAddImage={() => setContent(prev => ({ ...prev, heroImages: [...(prev.heroImages || DEFAULT_CONTENT.heroImages), DEFAULT_CONTENT.heroImages[0]] }))}
+          onRemoveImage={(idx) => setContent(prev => ({ ...prev, heroImages: (prev.heroImages || []).filter((_, i) => i !== idx) }))}
         />
         
-        {/* 1. 도장 소개 (관장님 인사말) */}
         <section id="intro" className="scroll-mt-20">
           <Intro 
             content={content} 
@@ -154,10 +180,8 @@ const App: React.FC = () => {
           />
         </section>
 
-        {/* 2. 도장 SNS 채널 (인사말과 교육철학 사이 배치) */}
         <SocialConnect />
 
-        {/* 3. 교육 철학 */}
         <section id="philosophy" className="bg-gray-50 scroll-mt-20">
           <Philosophy 
             content={content} 
@@ -167,7 +191,6 @@ const App: React.FC = () => {
           />
         </section>
 
-        {/* 4. 수련 프로그램 안내 */}
         <section id="programs" className="scroll-mt-20">
           <Programs 
             content={content} 
@@ -182,17 +205,14 @@ const App: React.FC = () => {
           />
         </section>
 
-        {/* 5. 도장 소식 게시판 */}
         <section id="notice" className="bg-gray-50 scroll-mt-20">
           <NoticeBoard posts={posts} isEditMode={isEditMode} onAddPost={addPost} onDeletePost={deletePost} />
         </section>
 
-        {/* 6. 상담 문의 및 오시는 길 */}
         <section id="contact" className="scroll-mt-20">
           <Contact content={content} isEditMode={isEditMode} onUpdate={handleContentUpdate} onFontSizeUpdate={handleFontSizeUpdate} />
         </section>
 
-        {/* 7. 무료 체험 신청 폼 */}
         <section id="apply" className="bg-blue-50 scroll-mt-20">
           <ApplicationForm />
         </section>

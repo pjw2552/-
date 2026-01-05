@@ -61,7 +61,7 @@ const Hero: React.FC<HeroProps> = ({
       {/* Background Images Layer */}
       {images.map((img, idx) => (
         <div
-          key={`hero-bg-${idx}-${img.length}`}
+          key={`hero-bg-${idx}-${(img || '').substring(0, 10)}`}
           className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out ${
             idx === currentIdx ? 'opacity-100' : 'opacity-0'
           }`}
@@ -78,7 +78,7 @@ const Hero: React.FC<HeroProps> = ({
             <div className="flex -space-x-3">
               {images.map((img, idx) => (
                 <button 
-                  key={`thumb-${idx}-${img.length}`} 
+                  key={`thumb-${idx}-${(img || '').substring(0, 10)}`} 
                   onClick={() => setCurrentIdx(idx)}
                   className={`relative w-14 h-14 rounded-2xl border-4 transition-all overflow-hidden shadow-sm ${
                     idx === currentIdx ? 'border-blue-600 scale-110 z-10 shadow-blue-200' : 'border-white opacity-40 hover:opacity-80'
