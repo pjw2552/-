@@ -8,6 +8,7 @@ interface AdminControlsProps {
   currentContent: SiteContent;
   currentPosts: Post[];
   onImport: (content: SiteContent, posts: Post[]) => void;
+  saveStatus?: 'saved' | 'saving' | 'error';
 }
 
 const AdminControls: React.FC<AdminControlsProps> = ({ 
@@ -15,7 +16,8 @@ const AdminControls: React.FC<AdminControlsProps> = ({
   toggleEdit, 
   currentContent, 
   currentPosts,
-  onImport
+  onImport,
+  saveStatus = 'saved'
 }) => {
   const [showLogin, setShowLogin] = useState(false);
   const [password, setPassword] = useState('');
@@ -62,6 +64,19 @@ const AdminControls: React.FC<AdminControlsProps> = ({
     URL.revokeObjectURL(url);
   };
 
+  const copyForDeployment = () => {
+    const data = {
+      content: currentContent,
+      posts: currentPosts
+    };
+    const text = JSON.stringify(data);
+    navigator.clipboard.writeText(text).then(() => {
+      alert("배포용 데이터가 복사되었습니다! 이 내용을 채팅창에 붙여넣어 저에게 주시면 핸드폰에서도 똑같이 보이도록 업데이트해 드립니다.");
+    }).catch(() => {
+      alert("복사에 실패했습니다. 내보내기(다운로드) 버튼을 이용해 파일을 전달해주세요.");
+    });
+  };
+
   const triggerImport = () => {
     fileInputRef.current?.click();
   };
@@ -86,28 +101,48 @@ const AdminControls: React.FC<AdminControlsProps> = ({
       }
     };
     reader.readAsText(file);
-    e.target.value = ''; // Reset for next selection
+    e.target.value = ''; 
   };
 
   return (
     <>
       <div className="fixed bottom-6 left-6 z-[200] flex flex-col gap-3 items-start">
         {isEditMode && (
-          <div className="flex gap-2 animate-fade-in-down">
-            <button 
-              onClick={exportData}
-              className="bg-blue-600 text-white w-12 h-12 rounded-full shadow-2xl flex items-center justify-center hover:bg-blue-700 transition-all hover:scale-110"
-              title="데이터 파일로 저장 (백업)"
-            >
-              <i className="fas fa-download"></i>
-            </button>
-            <button 
-              onClick={triggerImport}
-              className="bg-green-600 text-white w-12 h-12 rounded-full shadow-2xl flex items-center justify-center hover:bg-green-700 transition-all hover:scale-110"
-              title="데이터 불러오기 (복구)"
-            >
-              <i className="fas fa-upload"></i>
-            </button>
+          <div className="flex flex-col gap-2 animate-fade-in-down">
+            {/* Status Indicator */}
+            <div className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 shadow-lg mb-2 transition-colors ${
+              saveStatus === 'saved' ? 'bg-green-600 text-white' : 
+              saveStatus === 'saving' ? 'bg-blue-600 text-white animate-pulse' : 
+              'bg-red-600 text-white'
+            }`}>
+              <i className={`fas ${saveStatus === 'saved' ? 'fa-check' : saveStatus === 'saving' ? 'fa-sync' : 'fa-exclamation-triangle'}`}></i>
+              {saveStatus === 'saved' ? '기기에 저장 완료' : saveStatus === 'saving' ? '저장 중...' : '저장 용량 초과!'}
+            </div>
+
+            <div className="flex gap-2">
+              <button 
+                onClick={exportData}
+                className="bg-blue-600 text-white w-12 h-12 rounded-full shadow-2xl flex items-center justify-center hover:bg-blue-700 transition-all hover:scale-110"
+                title="백업 파일 다운로드"
+              >
+                <i className="fas fa-download"></i>
+              </button>
+              <button 
+                onClick={triggerImport}
+                className="bg-green-600 text-white w-12 h-12 rounded-full shadow-2xl flex items-center justify-center hover:bg-green-700 transition-all hover:scale-110"
+                title="데이터 불러오기"
+              >
+                <i className="fas fa-upload"></i>
+              </button>
+              <button 
+                onClick={copyForDeployment}
+                className="bg-purple-600 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2 hover:bg-purple-700 transition-all hover:scale-105 font-black text-xs"
+                title="배포용 데이터 복사"
+              >
+                <i className="fas fa-copy"></i> 배포 데이터 복사
+              </button>
+            </div>
+            
             <input 
               type="file" 
               ref={fileInputRef} 
@@ -130,11 +165,6 @@ const AdminControls: React.FC<AdminControlsProps> = ({
             <i className={`fas ${isEditMode ? 'fa-times' : 'fa-cog'} text-lg`}></i>
             {isEditMode ? '편집 종료' : '관리자 모드'}
           </button>
-          {isEditMode && (
-            <div className="mt-2 ml-4 bg-red-600 text-white text-[10px] px-3 py-1 rounded-full animate-bounce shadow-lg text-center font-bold">
-              편집 중...
-            </div>
-          )}
         </div>
       </div>
 

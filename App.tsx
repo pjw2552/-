@@ -23,7 +23,6 @@ const App: React.FC = () => {
       const saved = localStorage.getItem('site_content');
       if (saved) {
         const parsed = JSON.parse(saved);
-        // 저장된 데이터와 기본 데이터를 병합하여 구조적 안정성 확보
         const merged = { ...DEFAULT_CONTENT, ...parsed };
         if (!Array.isArray(merged.heroImages)) {
           merged.heroImages = DEFAULT_CONTENT.heroImages;
@@ -56,17 +55,21 @@ const App: React.FC = () => {
   });
 
   const [isEditMode, setIsEditMode] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved');
   const imageUploadRef = useRef<HTMLInputElement>(null);
   const [activeImgTarget, setActiveImgTarget] = useState<{key: ContentKey, index?: number} | null>(null);
 
   // --- Persistence with Error Handling ---
   useEffect(() => {
+    setSaveStatus('saving');
     try {
       localStorage.setItem('site_content', JSON.stringify(content));
+      setSaveStatus('saved');
     } catch (e) {
       console.error("Storage Error:", e);
+      setSaveStatus('error');
       if (e instanceof DOMException && e.name === 'QuotaExceededError') {
-        alert("이미지 용량이 너무 커서 더 이상 저장할 수 없습니다.\n일부 사진을 삭제하거나 더 작은 크기의 사진을 사용해주세요.");
+        alert("저장 공간이 부족합니다. 이미지를 너무 많이 넣었거나 고화질 사진일 수 있습니다. 사진 개수를 줄여주세요.");
       }
     }
   }, [content]);
@@ -120,7 +123,7 @@ const App: React.FC = () => {
     setPosts(newPosts);
   }, []);
 
-  // --- Image Processing (Optimization) ---
+  // --- Image Processing (Optimization for Mobile Storage) ---
   const compressAndResizeImage = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -130,30 +133,34 @@ const App: React.FC = () => {
         img.src = event.target?.result as string;
         img.onload = () => {
           const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 1200; // 최대 가로폭 제한
-          const MAX_HEIGHT = 1200; // 최대 세로폭 제한
+          // 모바일 저장소 한계를 고려해 최대 크기를 더 축소 (800px)
+          const MAX_SIZE = 800; 
           let width = img.width;
           let height = img.height;
 
           if (width > height) {
-            if (width > MAX_WIDTH) {
-              height *= MAX_WIDTH / width;
-              width = MAX_WIDTH;
+            if (width > MAX_SIZE) {
+              height *= MAX_SIZE / width;
+              width = MAX_SIZE;
             }
           } else {
-            if (height > MAX_HEIGHT) {
-              width *= MAX_HEIGHT / height;
-              height = MAX_HEIGHT;
+            if (height > MAX_SIZE) {
+              width *= MAX_SIZE / height;
+              height = MAX_SIZE;
             }
           }
 
           canvas.width = width;
           canvas.height = height;
           const ctx = canvas.getContext('2d');
-          ctx?.drawImage(img, 0, 0, width, height);
+          if (ctx) {
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(img, 0, 0, width, height);
+          }
           
-          // jpeg 포맷과 0.7 퀄리티로 압축하여 용량 최소화
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+          // 압축률을 0.5로 높여 용량 최소화 (모바일 웹 환경 최적화)
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
           resolve(dataUrl);
         };
         img.onerror = reject;
@@ -178,7 +185,7 @@ const App: React.FC = () => {
       }
     } catch (err) {
       console.error("Image processing failed:", err);
-      alert("이미지를 처리하는 중 오류가 발생했습니다.");
+      alert("사진을 처리하는 중 오류가 발생했습니다.");
     } finally {
       setActiveImgTarget(null);
     }
@@ -261,7 +268,8 @@ const App: React.FC = () => {
         toggleEdit={() => setIsEditMode(!isEditMode)} 
         currentContent={content} 
         currentPosts={posts} 
-        onImport={handleImportData} 
+        onImport={handleImportData}
+        saveStatus={saveStatus}
       />
 
       <input 
