@@ -5,62 +5,10 @@ export const COLORS = {
   primaryBlue: '#0047A0',
 };
 
-// 기본 사이트 콘텐츠 데이터
+// 관장님이 추출하여 보내주신 실제 데이터를 기본값으로 설정
 export const DEFAULT_CONTENT: SiteContent = {
   logoImg: "https://images.unsplash.com/photo-1555597673-b21d5c935865?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&q=80",
   heroTitle: "운동을 넘어\n아이의 삶의 태도를 키웁니다",
   heroDesc: "사랑으로 가르치고 믿음으로 성장하는 연세효 태권도장",
   heroImages: [
-    "https://images.unsplash.com/photo-1555597673-b21d5c935865?auto=format&fit=crop&q=80&w=1600",
-  ],
-  introSub: "인성 교육을 최우선으로 하는 연세효 태권도",
-  masterTitle: "관장 한상윤",
-  masterText: "안녕하십니까. 연세효 태권도장 관장 한상윤입니다. 저희 도장은 아이들이 올바른 가치관을 가지고 건강하게 성장할 수 있도록 최선을 다하고 있습니다.",
-  philo1T: "예의",
-  philo1D: "상호 존중과 바른 인성을 교육합니다.",
-  philo2T: "인내",
-  philo2D: "어려움을 극복하는 강인한 정신력을 기릅니다.",
-  philo3T: "염치",
-  philo3D: "옳고 그름을 아는 정직함을 가르칩니다.",
-  philo4T: "극기",
-  philo4D: "자신의 욕망을 이겨내는 자제력을 배웁니다.",
-  prog1Title: "유치부 키즈반",
-  prog1Desc: "놀이 중심의 활동을 통한 신체 발달",
-  prog2Title: "초등부 정규반",
-  prog2Desc: "기초 체력 증진 및 인성 교육",
-  prog3Title: "줄넘기 전문반",
-  prog3Desc: "성장판 자극 및 유산소 운동",
-  prog4Title: "시범단 · 중고등부",
-  prog4Desc: "고난도 기술 및 입시 준비",
-  prog1F1: "기초 운동 능력",
-  prog1F2: "예절 교육",
-  prog1F3: "사회성 발달",
-  prog2F1: "태권도 기본동작",
-  prog2F2: "품새 및 발차기",
-  prog2F3: "집중력 향상",
-  prog3F1: "급수별 줄넘기",
-  prog3F2: "음악 줄넘기",
-  prog3F3: "비만 관리",
-  prog4F1: "시범 기술 교육",
-  prog4F2: "리더십 배양",
-  prog4F3: "진로 상담",
-  addr: "서울 서대문구 독립문로8길 54",
-  tel: "010-9393-4033",
-  time: "평일 13:00 ~ 21:00\n주말 및 공휴일 휴무",
-  masterImg: "https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&q=80&w=800",
-  prog1Img: "https://images.unsplash.com/photo-1555597673-b21d5c935865?auto=format&fit=crop&q=80&w=800",
-  prog2Img: "https://images.unsplash.com/photo-1552072805-2a9039d00e57?auto=format&fit=crop&q=80&w=800",
-  prog3Img: "https://images.unsplash.com/photo-1517438476312-10d79c67750d?auto=format&fit=crop&q=80&w=800",
-  prog4Img: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&q=80&w=800",
-  fontSizes: {}
-};
-
-export const INITIAL_POSTS: Post[] = [
-  {
-    id: 1,
-    title: "연세효 태권도 홈페이지 오픈",
-    content: "우리 아이들의 건강한 성장을 위해 소통하는 공간이 마련되었습니다.",
-    date: new Date().toISOString().split('T')[0],
-    durationDays: 365
-  }
-];
+    "data:image/jpeg;base64,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
