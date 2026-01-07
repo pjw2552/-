@@ -13,6 +13,7 @@ import ApplicationForm from './components/ApplicationForm';
 import Footer from './components/Footer';
 import AdminControls from './components/AdminControls';
 import SocialConnect from './components/SocialConnect';
+import AIConsultant from './components/AIConsultant';
 
 const App: React.FC = () => {
   const DEFAULT_DURATION = 30;
@@ -20,14 +21,22 @@ const App: React.FC = () => {
   // --- State Initialization ---
   const [content, setContent] = useState<SiteContent>(() => {
     try {
+      // 배포 버전에서는 localStorage보다 DEFAULT_CONTENT가 더 최신일 수 있으므로 
+      // 로컬 스토리지가 비어있을 때 확실하게 상수를 사용하도록 합니다.
       const saved = localStorage.getItem('site_content');
       if (saved) {
         const parsed = JSON.parse(saved);
-        // 저장된 데이터와 기본 데이터를 합치되, heroImages는 반드시 배열 형태를 유지하도록 강제
+        // 저장된 데이터와 기본 데이터를 합칩니다 (새로 추가된 필드 대응)
         const merged = { ...DEFAULT_CONTENT, ...parsed };
+        
+        // heroImages 배열 보정
         if (!Array.isArray(merged.heroImages) || merged.heroImages.length === 0) {
           merged.heroImages = [...DEFAULT_CONTENT.heroImages];
         }
+        
+        // 폰트 사이즈 보정 (상수값 우선 적용이 필요한 경우 여기서 처리 가능)
+        merged.fontSizes = { ...DEFAULT_CONTENT.fontSizes, ...parsed.fontSizes };
+        
         return merged;
       }
     } catch (e) {
@@ -49,7 +58,8 @@ const App: React.FC = () => {
         const durationMs = (post.durationDays || DEFAULT_DURATION) * 24 * 60 * 60 * 1000;
         return isNaN(postDate) || (now - postDate) < durationMs;
       });
-      return freshPosts;
+      // 게시글이 하나도 없다면 기본 게시글 로드
+      return freshPosts.length > 0 ? freshPosts : INITIAL_POSTS;
     } catch (e) {
       return INITIAL_POSTS;
     }
@@ -62,23 +72,22 @@ const App: React.FC = () => {
 
   // --- Persistence ---
   useEffect(() => {
+    if (!isEditMode && saveStatus === 'saved') return; // 편집 모드가 아닐 때는 저장 건너뜀 (성능 최적화)
+    
     setSaveStatus('saving');
-    try {
-      localStorage.setItem('site_content', JSON.stringify(content));
-      setSaveStatus('saved');
-    } catch (e) {
-      console.error("Storage Error:", e);
-      setSaveStatus('error');
-    }
-  }, [content]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('site_posts', JSON.stringify(posts));
-    } catch (e) {
-      console.error("Error saving posts.");
-    }
-  }, [posts]);
+    const timer = setTimeout(() => {
+      try {
+        localStorage.setItem('site_content', JSON.stringify(content));
+        localStorage.setItem('site_posts', JSON.stringify(posts));
+        setSaveStatus('saved');
+      } catch (e) {
+        console.error("Storage Error:", e);
+        setSaveStatus('error');
+      }
+    }, 500); // 디바운싱 효과
+    
+    return () => clearTimeout(timer);
+  }, [content, posts, isEditMode]);
 
   // --- Handlers ---
   const handleContentUpdate = useCallback((key: ContentKey, value: any) => {
@@ -122,6 +131,9 @@ const App: React.FC = () => {
     }
     setContent(newContent);
     setPosts(newPosts);
+    // 임포트 시 즉시 로컬 스토리지 업데이트
+    localStorage.setItem('site_content', JSON.stringify(newContent));
+    localStorage.setItem('site_posts', JSON.stringify(newPosts));
   }, []);
 
   const compressAndResizeImage = (file: File): Promise<string> => {
@@ -133,7 +145,7 @@ const App: React.FC = () => {
         img.src = event.target?.result as string;
         img.onload = () => {
           const canvas = document.createElement('canvas');
-          const MAX_SIZE = 800; // 모바일 웹 최적화 사이즈
+          const MAX_SIZE = 1000; // 품질과 성능 균형
           let width = img.width;
           let height = img.height;
 
@@ -155,7 +167,7 @@ const App: React.FC = () => {
           if (ctx) {
             ctx.drawImage(img, 0, 0, width, height);
           }
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.6); // 압축률 조정
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.7); 
           resolve(dataUrl);
         };
         img.onerror = reject;
@@ -205,6 +217,7 @@ const App: React.FC = () => {
       </main>
       <Footer />
       <AdminControls isEditMode={isEditMode} toggleEdit={() => setIsEditMode(!isEditMode)} currentContent={content} currentPosts={posts} onImport={handleImportData} saveStatus={saveStatus} />
+      <AIConsultant />
       <input type="file" ref={imageUploadRef} className="hidden" accept="image/*" onChange={(e) => { const file = e.target.files?.[0]; if (file) processImageFile(file); }} />
     </div>
   );
