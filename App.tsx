@@ -23,9 +23,10 @@ const App: React.FC = () => {
       const saved = localStorage.getItem('site_content');
       if (saved) {
         const parsed = JSON.parse(saved);
+        // 저장된 데이터와 기본 데이터를 합치되, heroImages는 반드시 배열 형태를 유지하도록 강제
         const merged = { ...DEFAULT_CONTENT, ...parsed };
-        if (!Array.isArray(merged.heroImages)) {
-          merged.heroImages = DEFAULT_CONTENT.heroImages;
+        if (!Array.isArray(merged.heroImages) || merged.heroImages.length === 0) {
+          merged.heroImages = [...DEFAULT_CONTENT.heroImages];
         }
         return merged;
       }
@@ -59,7 +60,7 @@ const App: React.FC = () => {
   const imageUploadRef = useRef<HTMLInputElement>(null);
   const [activeImgTarget, setActiveImgTarget] = useState<{key: ContentKey, index?: number} | null>(null);
 
-  // --- Persistence with Error Handling ---
+  // --- Persistence ---
   useEffect(() => {
     setSaveStatus('saving');
     try {
@@ -68,9 +69,6 @@ const App: React.FC = () => {
     } catch (e) {
       console.error("Storage Error:", e);
       setSaveStatus('error');
-      if (e instanceof DOMException && e.name === 'QuotaExceededError') {
-        alert("저장 공간이 부족합니다. 이미지를 너무 많이 넣었거나 고화질 사진일 수 있습니다. 사진 개수를 줄여주세요.");
-      }
     }
   }, [content]);
 
@@ -119,11 +117,13 @@ const App: React.FC = () => {
   }, []);
 
   const handleImportData = useCallback((newContent: SiteContent, newPosts: Post[]) => {
+    if (newContent.heroImages && !Array.isArray(newContent.heroImages)) {
+        newContent.heroImages = [newContent.heroImages];
+    }
     setContent(newContent);
     setPosts(newPosts);
   }, []);
 
-  // --- Image Processing (Optimization for Mobile Storage) ---
   const compressAndResizeImage = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -133,8 +133,7 @@ const App: React.FC = () => {
         img.src = event.target?.result as string;
         img.onload = () => {
           const canvas = document.createElement('canvas');
-          // 모바일 저장소 한계를 고려해 최대 크기를 더 축소 (800px)
-          const MAX_SIZE = 800; 
+          const MAX_SIZE = 800; // 모바일 웹 최적화 사이즈
           let width = img.width;
           let height = img.height;
 
@@ -154,13 +153,9 @@ const App: React.FC = () => {
           canvas.height = height;
           const ctx = canvas.getContext('2d');
           if (ctx) {
-            ctx.imageSmoothingEnabled = true;
-            ctx.imageSmoothingQuality = 'high';
             ctx.drawImage(img, 0, 0, width, height);
           }
-          
-          // 압축률을 0.5로 높여 용량 최소화 (모바일 웹 환경 최적화)
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.6); // 압축률 조정
           resolve(dataUrl);
         };
         img.onerror = reject;
@@ -171,21 +166,17 @@ const App: React.FC = () => {
 
   const processImageFile = async (file: File) => {
     if (!activeImgTarget) return;
-    
     try {
       const compressedImg = await compressAndResizeImage(file);
-      
       if (activeImgTarget.key === 'heroImages' && activeImgTarget.index !== undefined) {
         const newImgs = [...(content.heroImages || [])];
-        if (newImgs.length === 0) newImgs.push(DEFAULT_CONTENT.heroImages[0]);
         newImgs[activeImgTarget.index] = compressedImg;
         handleContentUpdate('heroImages', newImgs);
       } else {
         handleContentUpdate(activeImgTarget.key, compressedImg);
       }
     } catch (err) {
-      console.error("Image processing failed:", err);
-      alert("사진을 처리하는 중 오류가 발생했습니다.");
+      alert("이미지 처리 중 오류가 발생했습니다.");
     } finally {
       setActiveImgTarget(null);
     }
@@ -193,12 +184,7 @@ const App: React.FC = () => {
 
   return (
     <div className={`relative min-h-screen ${isEditMode ? 'admin-active' : ''}`}>
-      <Navbar 
-        content={content} 
-        isEditMode={isEditMode} 
-        onImageClick={() => handleImageClick('logoImg')} 
-      />
-      
+      <Navbar content={content} isEditMode={isEditMode} onImageClick={() => handleImageClick('logoImg')} />
       <main>
         <Hero 
           content={content} 
@@ -206,82 +192,20 @@ const App: React.FC = () => {
           onUpdate={handleContentUpdate}
           onFontSizeUpdate={handleFontSizeUpdate}
           onImageClick={(idx) => handleImageClick('heroImages', idx)}
-          onAddImage={() => setContent(prev => ({ ...prev, heroImages: [...(prev.heroImages || DEFAULT_CONTENT.heroImages), DEFAULT_CONTENT.heroImages[0]] }))}
+          onAddImage={() => setContent(prev => ({ ...prev, heroImages: [...(prev.heroImages || []), DEFAULT_CONTENT.heroImages[0]] }))}
           onRemoveImage={(idx) => setContent(prev => ({ ...prev, heroImages: (prev.heroImages || []).filter((_, i) => i !== idx) }))}
         />
-        
-        <section id="intro" className="scroll-mt-20">
-          <Intro 
-            content={content} 
-            isEditMode={isEditMode} 
-            onUpdate={handleContentUpdate} 
-            onImageClick={(key) => handleImageClick(key)}
-            onImageDrop={(key, file) => {
-              setActiveImgTarget({ key });
-              processImageFile(file);
-            }}
-          />
-        </section>
-
+        <section id="intro"><Intro content={content} isEditMode={isEditMode} onUpdate={handleContentUpdate} onImageClick={(key) => handleImageClick(key)} /></section>
         <SocialConnect />
-
-        <section id="philosophy" className="bg-gray-50 scroll-mt-20">
-          <Philosophy 
-            content={content} 
-            isEditMode={isEditMode} 
-            onUpdate={handleContentUpdate} 
-            onFontSizeUpdate={handleFontSizeUpdate} 
-          />
-        </section>
-
-        <section id="programs" className="scroll-mt-20">
-          <Programs 
-            content={content} 
-            isEditMode={isEditMode} 
-            onUpdate={handleContentUpdate} 
-            onFontSizeUpdate={handleFontSizeUpdate} 
-            onImageClick={(key) => handleImageClick(key)}
-            onImageDrop={(key, file) => {
-              setActiveImgTarget({ key });
-              processImageFile(file);
-            }}
-          />
-        </section>
-
-        <section id="notice" className="bg-gray-50 scroll-mt-20">
-          <NoticeBoard posts={posts} isEditMode={isEditMode} onAddPost={addPost} onDeletePost={deletePost} />
-        </section>
-
-        <section id="contact" className="scroll-mt-20">
-          <Contact content={content} isEditMode={isEditMode} onUpdate={handleContentUpdate} onFontSizeUpdate={handleFontSizeUpdate} />
-        </section>
-
-        <section id="apply" className="bg-blue-50 scroll-mt-20">
-          <ApplicationForm />
-        </section>
+        <section id="philosophy" className="bg-gray-50"><Philosophy content={content} isEditMode={isEditMode} onUpdate={handleContentUpdate} onFontSizeUpdate={handleFontSizeUpdate} /></section>
+        <section id="programs"><Programs content={content} isEditMode={isEditMode} onUpdate={handleContentUpdate} onFontSizeUpdate={handleFontSizeUpdate} onImageClick={(key) => handleImageClick(key)} /></section>
+        <section id="notice" className="bg-gray-50"><NoticeBoard posts={posts} isEditMode={isEditMode} onAddPost={addPost} onDeletePost={deletePost} /></section>
+        <section id="contact"><Contact content={content} isEditMode={isEditMode} onUpdate={handleContentUpdate} onFontSizeUpdate={handleFontSizeUpdate} /></section>
+        <section id="apply" className="bg-blue-50"><ApplicationForm /></section>
       </main>
-
       <Footer />
-      
-      <AdminControls 
-        isEditMode={isEditMode} 
-        toggleEdit={() => setIsEditMode(!isEditMode)} 
-        currentContent={content} 
-        currentPosts={posts} 
-        onImport={handleImportData}
-        saveStatus={saveStatus}
-      />
-
-      <input 
-        type="file" 
-        ref={imageUploadRef} 
-        className="hidden" 
-        accept="image/*" 
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) processImageFile(file);
-        }} 
-      />
+      <AdminControls isEditMode={isEditMode} toggleEdit={() => setIsEditMode(!isEditMode)} currentContent={content} currentPosts={posts} onImport={handleImportData} saveStatus={saveStatus} />
+      <input type="file" ref={imageUploadRef} className="hidden" accept="image/*" onChange={(e) => { const file = e.target.files?.[0]; if (file) processImageFile(file); }} />
     </div>
   );
 };
