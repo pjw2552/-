@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { SiteContent, ContentKey } from '../types';
 import EditableText from './EditableText';
@@ -14,7 +13,6 @@ interface ContactProps {
 const Contact: React.FC<ContactProps> = ({ content, isEditMode, onUpdate, onFontSizeUpdate }) => {
   // 관장님 제공 네이버 지도 직접 연결 링크
   const naverMapDirectUrl = `https://map.naver.com/p/entry/place/1936106538?c=18.75,0,0,0,dh&placePath=/home`;
-  const kakaoMapUrl = `https://map.kakao.com/link/map/연세효태권도,37.56846,126.95831`;
   
   // 검색용 주소
   const cleanAddr = content.addr.split(' ').filter(word => !word.includes('호')).join(' ');
@@ -85,9 +83,9 @@ const Contact: React.FC<ContactProps> = ({ content, isEditMode, onUpdate, onFont
         </div>
 
         {/* Info Section */}
-        <div className="bg-white p-10 md:p-14 rounded-[3rem] shadow-sm border border-gray-100 flex flex-col justify-center space-y-10">
+        <div className="bg-white p-8 md:p-12 rounded-[3rem] shadow-sm border border-gray-100 flex flex-col justify-center space-y-10">
           <div className="flex items-start">
-            <div className="w-14 h-14 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center mr-8 shrink-0 shadow-sm border border-red-100">
+            <div className="w-14 h-14 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center mr-6 md:mr-8 shrink-0 shadow-sm border border-red-100">
               <i className="fas fa-map-marked-alt text-2xl"></i>
             </div>
             <div className="flex-1">
@@ -104,10 +102,10 @@ const Contact: React.FC<ContactProps> = ({ content, isEditMode, onUpdate, onFont
           </div>
 
           <div className="flex items-start">
-            <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mr-8 shrink-0 shadow-sm border border-blue-100">
+            <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mr-6 md:mr-8 shrink-0 shadow-sm border border-blue-100">
               <i className="fas fa-phone-alt text-2xl"></i>
             </div>
-            <div>
+            <div className="flex-1">
               <h5 className="font-black text-xl mb-2 text-gray-900">상담 및 교육 문의</h5>
               <EditableText 
                 value={content.tel}
@@ -121,7 +119,7 @@ const Contact: React.FC<ContactProps> = ({ content, isEditMode, onUpdate, onFont
           </div>
 
           <div className="flex items-start">
-            <div className="w-14 h-14 rounded-2xl bg-green-50 text-green-600 flex items-center justify-center mr-8 shrink-0 shadow-sm border border-green-100">
+            <div className="w-14 h-14 rounded-2xl bg-green-50 text-green-600 flex items-center justify-center mr-6 md:mr-8 shrink-0 shadow-sm border border-green-100">
               <i className="fas fa-clock text-2xl"></i>
             </div>
             <div className="flex-1">
@@ -132,7 +130,7 @@ const Contact: React.FC<ContactProps> = ({ content, isEditMode, onUpdate, onFont
                 onUpdate={(v) => onUpdate('time', v)}
                 fontSize={content.fontSizes?.time}
                 onFontSizeUpdate={(size) => onFontSizeUpdate('time', size)}
-                className="text-gray-500 leading-relaxed font-bold"
+                className="text-gray-500 leading-relaxed font-bold break-keep"
                 multiline
               />
             </div>

@@ -7,15 +7,10 @@ import { GoogleGenAI } from "@google/genai";
  */
 export async function askTaekwondoMentor(question: string) {
   try {
-    // browser 환경에서는 process가 없을 수 있으므로 안전하게 접근
-    const env = typeof process !== 'undefined' ? process.env : {};
-    const apiKey = env.API_KEY || '';
+    // Obtain API key exclusively from process.env.API_KEY
+    // Always use a named parameter: { apiKey: process.env.API_KEY }
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
-    if (!apiKey) {
-      return "상담 서비스 설정이 완료되지 않았습니다.";
-    }
-
-    const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: question,
@@ -25,8 +20,9 @@ export async function askTaekwondoMentor(question: string) {
         Suggestion: Contact the office at 010-9393-4033 for details.`,
       },
     });
+    // Use .text property directly instead of .text() method
     return response.text || "죄송합니다. 답변을 생성하는 중에 오류가 발생했습니다.";
-  } catch (error) {
+  } catch (error: any) {
     console.error("Gemini API Error:", error);
     return "현재 상담이 원활하지 않습니다. 도장으로 직접 문의 부탁드립니다.";
   }
