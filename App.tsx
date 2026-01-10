@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { SiteContent, ContentKey, Post } from './types';
 import { DEFAULT_CONTENT, INITIAL_POSTS } from './constants';
@@ -21,12 +20,11 @@ const App: React.FC = () => {
   // --- State Initialization ---
   const [content, setContent] = useState<SiteContent>(() => {
     try {
-      // 배포 버전에서는 localStorage보다 DEFAULT_CONTENT가 더 최신일 수 있으므로 
-      // 로컬 스토리지가 비어있을 때 확실하게 상수를 사용하도록 합니다.
       const saved = localStorage.getItem('site_content');
       if (saved) {
         const parsed = JSON.parse(saved);
-        // 저장된 데이터와 기본 데이터를 합칩니다 (새로 추가된 필드 대응)
+        // 저장된 데이터가 너무 비정상적으로 크거나 에러가 있을 경우를 대비해 
+        // 기본값과 병합하여 안정성을 확보합니다.
         const merged = { ...DEFAULT_CONTENT, ...parsed };
         
         // heroImages 배열 보정
@@ -34,13 +32,14 @@ const App: React.FC = () => {
           merged.heroImages = [...DEFAULT_CONTENT.heroImages];
         }
         
-        // 폰트 사이즈 보정 (상수값 우선 적용이 필요한 경우 여기서 처리 가능)
-        merged.fontSizes = { ...DEFAULT_CONTENT.fontSizes, ...parsed.fontSizes };
-        
+        // 폰트 사이즈 병합
+        merged.fontSizes = { ...DEFAULT_CONTENT.fontSizes, ...(parsed.fontSizes || {}) };
         return merged;
       }
     } catch (e) {
-      console.warn("Content Load Error, using defaults");
+      console.error("Content Load Error:", e);
+      // 에러 발생 시 로컬 스토리지를 비워서 다음 로딩 때 정상이 되도록 함
+      localStorage.removeItem('site_content');
     }
     return DEFAULT_CONTENT;
   });
@@ -58,7 +57,6 @@ const App: React.FC = () => {
         const durationMs = (post.durationDays || DEFAULT_DURATION) * 24 * 60 * 60 * 1000;
         return isNaN(postDate) || (now - postDate) < durationMs;
       });
-      // 게시글이 하나도 없다면 기본 게시글 로드
       return freshPosts.length > 0 ? freshPosts : INITIAL_POSTS;
     } catch (e) {
       return INITIAL_POSTS;
@@ -72,10 +70,11 @@ const App: React.FC = () => {
 
   // --- Persistence ---
   useEffect(() => {
-    if (!isEditMode && saveStatus === 'saved') return; // 편집 모드가 아닐 때는 저장 건너뜀 (성능 최적화)
-    
-    setSaveStatus('saving');
+    // 편집 모드일 때만 저장 실행 (성능 및 백화현상 방지)
+    if (!isEditMode) return;
+
     const timer = setTimeout(() => {
+      setSaveStatus('saving');
       try {
         localStorage.setItem('site_content', JSON.stringify(content));
         localStorage.setItem('site_posts', JSON.stringify(posts));
@@ -84,7 +83,7 @@ const App: React.FC = () => {
         console.error("Storage Error:", e);
         setSaveStatus('error');
       }
-    }, 500); // 디바운싱 효과
+    }, 1500); // 저장 딜레이를 조금 늘려 안정성 확보
     
     return () => clearTimeout(timer);
   }, [content, posts, isEditMode]);
@@ -131,7 +130,6 @@ const App: React.FC = () => {
     }
     setContent(newContent);
     setPosts(newPosts);
-    // 임포트 시 즉시 로컬 스토리지 업데이트
     localStorage.setItem('site_content', JSON.stringify(newContent));
     localStorage.setItem('site_posts', JSON.stringify(newPosts));
   }, []);
@@ -145,7 +143,7 @@ const App: React.FC = () => {
         img.src = event.target?.result as string;
         img.onload = () => {
           const canvas = document.createElement('canvas');
-          const MAX_SIZE = 1000; // 품질과 성능 균형
+          const MAX_SIZE = 1200;
           let width = img.width;
           let height = img.height;
 
@@ -167,6 +165,7 @@ const App: React.FC = () => {
           if (ctx) {
             ctx.drawImage(img, 0, 0, width, height);
           }
+          // 압축률을 0.7로 낮춰 데이터 크기를 줄임 (백화현상 방지)
           const dataUrl = canvas.toDataURL('image/jpeg', 0.7); 
           resolve(dataUrl);
         };
@@ -188,7 +187,7 @@ const App: React.FC = () => {
         handleContentUpdate(activeImgTarget.key, compressedImg);
       }
     } catch (err) {
-      alert("이미지 처리 중 오류가 발생했습니다.");
+      alert("이미지 처리 중 오류가 발생했습니다. 파일 크기를 줄여보세요.");
     } finally {
       setActiveImgTarget(null);
     }
