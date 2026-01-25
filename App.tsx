@@ -12,7 +12,6 @@ import ApplicationForm from './components/ApplicationForm';
 import Footer from './components/Footer';
 import AdminControls from './components/AdminControls';
 import SocialConnect from './components/SocialConnect';
-import AIConsultant from './components/AIConsultant';
 
 const App: React.FC = () => {
   const DEFAULT_DURATION = 30;
@@ -20,26 +19,21 @@ const App: React.FC = () => {
   // --- State Initialization ---
   const [content, setContent] = useState<SiteContent>(() => {
     try {
+      // 배포 버전이 업데이트되었을 때, 이전의 잘못된 데이터가 화면을 가리는 것을 방지하기 위해
+      // 소스 코드의 DEFAULT_CONTENT를 가장 먼저 고려하도록 합니다.
       const saved = localStorage.getItem('site_content');
       if (saved) {
         const parsed = JSON.parse(saved);
-        // 저장된 데이터가 너무 비정상적으로 크거나 에러가 있을 경우를 대비해 
-        // 기본값과 병합하여 안정성을 확보합니다.
+        // 기본값과 병합하되, 배열 데이터는 기본값을 우선시하거나 안전하게 처리
         const merged = { ...DEFAULT_CONTENT, ...parsed };
-        
-        // heroImages 배열 보정
         if (!Array.isArray(merged.heroImages) || merged.heroImages.length === 0) {
           merged.heroImages = [...DEFAULT_CONTENT.heroImages];
         }
-        
-        // 폰트 사이즈 병합
         merged.fontSizes = { ...DEFAULT_CONTENT.fontSizes, ...(parsed.fontSizes || {}) };
         return merged;
       }
     } catch (e) {
-      console.error("Content Load Error:", e);
-      // 에러 발생 시 로컬 스토리지를 비워서 다음 로딩 때 정상이 되도록 함
-      localStorage.removeItem('site_content');
+      console.warn("Storage Load Error, using defaults");
     }
     return DEFAULT_CONTENT;
   });
@@ -47,20 +41,13 @@ const App: React.FC = () => {
   const [posts, setPosts] = useState<Post[]>(() => {
     try {
       const saved = localStorage.getItem('site_posts');
-      const loadedPosts: Post[] = saved ? JSON.parse(saved) : INITIAL_POSTS;
-      
-      const now = new Date().getTime();
-      const freshPosts = loadedPosts.filter(post => {
-        if (!post.date) return false;
-        const [year, month, day] = post.date.split('-').map(Number);
-        const postDate = new Date(year, month - 1, day).getTime();
-        const durationMs = (post.durationDays || DEFAULT_DURATION) * 24 * 60 * 60 * 1000;
-        return isNaN(postDate) || (now - postDate) < durationMs;
-      });
-      return freshPosts.length > 0 ? freshPosts : INITIAL_POSTS;
+      if (saved) {
+        return JSON.parse(saved);
+      }
     } catch (e) {
       return INITIAL_POSTS;
     }
+    return INITIAL_POSTS;
   });
 
   const [isEditMode, setIsEditMode] = useState(false);
@@ -68,9 +55,9 @@ const App: React.FC = () => {
   const imageUploadRef = useRef<HTMLInputElement>(null);
   const [activeImgTarget, setActiveImgTarget] = useState<{key: ContentKey, index?: number} | null>(null);
 
-  // --- Persistence ---
+  // --- Persistence (Fixed Loop) ---
   useEffect(() => {
-    // 편집 모드일 때만 저장 실행 (성능 및 백화현상 방지)
+    // 편집 모드일 때만 명시적으로 저장
     if (!isEditMode) return;
 
     const timer = setTimeout(() => {
@@ -80,10 +67,9 @@ const App: React.FC = () => {
         localStorage.setItem('site_posts', JSON.stringify(posts));
         setSaveStatus('saved');
       } catch (e) {
-        console.error("Storage Error:", e);
         setSaveStatus('error');
       }
-    }, 1500); // 저장 딜레이를 조금 늘려 안정성 확보
+    }, 1000);
     
     return () => clearTimeout(timer);
   }, [content, posts, isEditMode]);
@@ -125,9 +111,6 @@ const App: React.FC = () => {
   }, []);
 
   const handleImportData = useCallback((newContent: SiteContent, newPosts: Post[]) => {
-    if (newContent.heroImages && !Array.isArray(newContent.heroImages)) {
-        newContent.heroImages = [newContent.heroImages];
-    }
     setContent(newContent);
     setPosts(newPosts);
     localStorage.setItem('site_content', JSON.stringify(newContent));
@@ -146,28 +129,16 @@ const App: React.FC = () => {
           const MAX_SIZE = 1200;
           let width = img.width;
           let height = img.height;
-
           if (width > height) {
-            if (width > MAX_SIZE) {
-              height *= MAX_SIZE / width;
-              width = MAX_SIZE;
-            }
+            if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
           } else {
-            if (height > MAX_SIZE) {
-              width *= MAX_SIZE / height;
-              height = MAX_SIZE;
-            }
+            if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; }
           }
-
           canvas.width = width;
           canvas.height = height;
           const ctx = canvas.getContext('2d');
-          if (ctx) {
-            ctx.drawImage(img, 0, 0, width, height);
-          }
-          // 압축률을 0.7로 낮춰 데이터 크기를 줄임 (백화현상 방지)
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.7); 
-          resolve(dataUrl);
+          if (ctx) ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.7));
         };
         img.onerror = reject;
       };
@@ -187,7 +158,7 @@ const App: React.FC = () => {
         handleContentUpdate(activeImgTarget.key, compressedImg);
       }
     } catch (err) {
-      alert("이미지 처리 중 오류가 발생했습니다. 파일 크기를 줄여보세요.");
+      alert("이미지 처리 실패");
     } finally {
       setActiveImgTarget(null);
     }
@@ -216,7 +187,6 @@ const App: React.FC = () => {
       </main>
       <Footer />
       <AdminControls isEditMode={isEditMode} toggleEdit={() => setIsEditMode(!isEditMode)} currentContent={content} currentPosts={posts} onImport={handleImportData} saveStatus={saveStatus} />
-      <AIConsultant />
       <input type="file" ref={imageUploadRef} className="hidden" accept="image/*" onChange={(e) => { const file = e.target.files?.[0]; if (file) processImageFile(file); }} />
     </div>
   );

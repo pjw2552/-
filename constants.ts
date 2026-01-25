@@ -5,6 +5,8 @@ export const COLORS = {
   primaryBlue: '#0047A0',
 };
 
+// 관장님이 수정하신 내용을 소스 코드의 '기본값'으로 고정합니다.
+// 이 코드가 배포되면 누구든 이 내용을 보게 됩니다.
 export const DEFAULT_CONTENT: SiteContent = {
   logoImg: "https://images.unsplash.com/photo-1555597673-b21d5c935865?q=80&w=200&auto=format&fit=crop",
   heroTitle: "운동을 넘어\n아이의 삶의 태도를 키웁니다",
